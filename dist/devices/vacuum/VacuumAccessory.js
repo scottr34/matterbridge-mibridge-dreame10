@@ -1,4 +1,5 @@
 import { CleanMode, VacuumErrorCode, VacuumState } from '@mibridge/core';
+import { MatterbridgeEndpoint, onOffLight } from 'matterbridge';
 import { RoboticVacuumCleaner } from 'matterbridge/devices';
 import { BaseDeviceAccessory } from '../../platform/DeviceAccessory.js';
 export class VacuumAccessory extends BaseDeviceAccessory {
@@ -46,8 +47,21 @@ export class VacuumAccessory extends BaseDeviceAccessory {
         if (this.verbose) {
             await this.displayVerboseInfo(device, vacuumClient, maps, areas, supportedAreas);
         }
+        const switchEndpoint = new MatterbridgeEndpoint([onOffLight], {
+            id: `${device.name.replaceAll(' ', '')}-cleaning-${did.replaceAll(' ', '')}`,
+        });
+        switchEndpoint
+            .createDefaultIdentifyClusterServer()
+            .createDefaultBridgedDeviceBasicInformationClusterServer(
+                `${device.name} Cleaning`,
+                `${did}-sw`,
+                0xfff1,
+                'Matterbridge',
+                'Vacuum Cleaning Switch',
+            )
+            .createDefaultOnOffClusterServer();
         this.setupCommandHandlers(vacuum, vacuumClient, did);
-        this.setupEventListeners(vacuum, vacuumClient, did);
+        this.setupEventListeners(vacuum, vacuumClient, did, switchEndpoint);
         platform.setSelectDevice(did, device.name);
         const selected = platform.validateDevice([device.name, did]);
         if (!selected) {
@@ -55,7 +69,9 @@ export class VacuumAccessory extends BaseDeviceAccessory {
             return null;
         }
         await platform.registerDevice(vacuum);
+        await platform.registerDevice(switchEndpoint);
         this.log.info(`Registered vacuum: ${device.name}`);
+        this.log.info(`Registered cleaning switch for: ${device.name}`);
         return vacuum;
     }
     setupCommandHandlers(vacuum, client, did) {
@@ -139,7 +155,7 @@ export class VacuumAccessory extends BaseDeviceAccessory {
             }
         });
     }
-    setupEventListeners(vacuum, client, did) {
+    setupEventListeners(vacuum, client, did, switchEndpoint) {
         let lastMopPresent = null;
         client.on('statusChange', async (status) => {
             if (this.verbose) {
@@ -173,6 +189,16 @@ export class VacuumAccessory extends BaseDeviceAccessory {
                     catch (err) {
                         this.log.debug(`[${did}] Could not clear selected areas: ${err}`);
                     }
+                }
+                // ON while a job is in progress (including paused); OFF when docked/idle/returning
+                const isActive = status.state === VacuumState.Cleaning ||
+                    status.state === VacuumState.Mapping ||
+                    status.state === VacuumState.Paused;
+                try {
+                    await switchEndpoint.setAttribute('onOff', 'onOff', isActive);
+                }
+                catch (err) {
+                    this.log.debug(`[${did}] Could not update cleaning switch: ${err}`);
                 }
             }
             const mopMissing = status.errorCode === VacuumErrorCode.MopPadMissing;
