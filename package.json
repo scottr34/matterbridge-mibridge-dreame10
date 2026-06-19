@@ -1,9 +1,9 @@
 {
   "name": "matterbridge-mibridge",
   "version": "0.1.0",
-  "description": "Matterbridge MiBridge Plugin — bridges MiHome API to Matter",
-  "author": "https://github.com/iblur01",
-  "homepage": "https://github.com/iblur01/mibridge-matterbridge",
+  "description": "Matterbridge MiBridge Plugin — bridges MiHome API to Matter (Dreame 10 fork)",
+  "author": "https://github.com/scottr34",
+  "homepage": "https://github.com/scottr34/matterbridge-mibridge-dreame10",
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/module.js",
@@ -19,10 +19,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iblur01/mibridge-matterbridge.git"
+    "url": "git+https://github.com/scottr34/matterbridge-mibridge-dreame10.git"
   },
   "bugs": {
-    "url": "https://github.com/iblur01/mibridge-matterbridge/issues"
+    "url": "https://github.com/scottr34/matterbridge-mibridge-dreame10/issues"
   },
   "keywords": [
     "matterbridge",
