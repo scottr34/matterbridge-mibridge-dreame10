@@ -190,15 +190,23 @@ export class VacuumAccessory extends BaseDeviceAccessory {
                         this.log.debug(`[${did}] Could not clear selected areas: ${err}`);
                     }
                 }
-                // ON while a job is in progress (including paused); OFF when docked/idle/returning
-                const isActive = status.state === VacuumState.Cleaning ||
-                    status.state === VacuumState.Mapping ||
-                    status.state === VacuumState.Paused;
-                try {
-                    await switchEndpoint.setAttribute('onOff', 'onOff', isActive);
-                }
-                catch (err) {
-                    this.log.debug(`[${did}] Could not update cleaning switch: ${err}`);
+                // Stateful: turn ON when a job starts, OFF only when docked.
+                // Paused/Idle/Returning/Error leave the switch unchanged so that
+                // a pause mid-clean doesn't break the "resume when TV stops" automation.
+                if (status.state === VacuumState.Cleaning || status.state === VacuumState.Mapping) {
+                    try {
+                        await switchEndpoint.setAttribute('onOff', 'onOff', true);
+                    }
+                    catch (err) {
+                        this.log.debug(`[${did}] Could not update cleaning switch: ${err}`);
+                    }
+                } else if (status.state === VacuumState.Docked) {
+                    try {
+                        await switchEndpoint.setAttribute('onOff', 'onOff', false);
+                    }
+                    catch (err) {
+                        this.log.debug(`[${did}] Could not update cleaning switch: ${err}`);
+                    }
                 }
             }
             const mopMissing = status.errorCode === VacuumErrorCode.MopPadMissing;
